@@ -1,0 +1,34 @@
+{
+    "match": {
+        "setupSec": 20,
+        "huntSec": 180,
+        "showdownSec": 90
+    },
+    "survivor": {
+        "walk": 3.5,
+        "run": 6.5,
+        "crouch": 1.8,
+        "staminaMax": 7.0,
+        "staminaRegen": 1.2,
+        "sanityMax": 100,
+        "sanityDrain": 0.5
+    },
+    "killer": {
+        "walk": 4.2,
+        "runBurst": 8.0,
+        "burstDur": 2.5,
+        "burstCD": 8.0,
+        "senseConeRange": 15
+    },
+    "disasters": {
+        "minDelaySec": 45,
+        "maxDelaySec": 90,
+        "probabilities": {
+            "earthquake": 0.4,
+            "lightning": 0.6
+        }
+    },
+    "audio": {
+        "masterVolume": 0.7
+    }
+}

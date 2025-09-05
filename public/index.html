@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>House of Last Light</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --killer-red: #ff0000;
+            --survivor-blue: #4a90e2;
+            --ui-text: #e0e0e0;
+            --ui-bg: rgba(10, 0, 0, 0.75);
+            --ui-border: 1px solid var(--killer-red);
+        }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: var(--ui-text);
+            font-family: 'VT323', monospace;
+            cursor: pointer;
+        }
+        canvas {
+            display: block;
+        }
+        #ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            text-shadow: 0 0 5px #000, 0 0 10px #000;
+        }
+        .ui-panel {
+            background: var(--ui-bg);
+            border: var(--ui-border);
+            padding: 20px;
+            box-shadow: 0 0 15px var(--killer-red), inset 0 0 10px rgba(255, 0, 0, 0.5);
+            pointer-events: all;
+            text-align: center;
+            animation: text-flicker 3s linear infinite;
+        }
+        #main-menu, #pause-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 350px;
+        }
+        h1 {
+            font-family: 'Special Elite', cursive;
+            color: var(--killer-red);
+            text-shadow: 0 0 10px var(--killer-red);
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+        button {
+            background: #330000;
+            border: var(--ui-border);
+            color: var(--ui-text);
+            padding: 10px 20px;
+            font-family: 'VT323', monospace;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.2s;
+            text-shadow: 0 0 5px var(--killer-red);
+        }
+        button:hover {
+            background: var(--killer-red);
+            color: #000;
+        }
+        #hud-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-size: 1.5em;
+            display: none;
+            background: var(--ui-bg);
+            padding: 10px;
+            border: var(--ui-border);
+            pointer-events: none;
+        }
+        .hud-bar { width: 150px; height: 15px; background: #333; border: 1px solid #777; margin-top: 5px; }
+        .hud-bar > div { height: 100%; transition: width 0.5s ease; }
+        #stamina-fill { background: var(--survivor-blue); }
+        #sanity-fill { background: #c131e0; }
+
+        #interaction-prompt {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            color: white;
+            pointer-events: none;
+        }
+        #game-phase-banner {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 4em;
+            font-family: 'Special Elite', cursive;
+            color: var(--killer-red);
+            padding: 10px 30px;
+            display: none;
+            animation: banner-fade 4s forwards;
+            pointer-events: none;
+        }
+        @keyframes banner-fade {
+            0% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+            80% { opacity: 1; transform: translateX(-50%) scale(1); }
+            100% { opacity: 0; }
+        }
+
+        #vhs-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.02) 1.5px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 3px);
+            mix-blend-mode: screen;
+            animation: vhs-scanlines 0.2s steps(2) infinite;
+            pointer-events: none;
+            opacity: 0.5;
+            z-index: 10;
+        }
+        .vignette { box-shadow: inset 0 0 20vw 5vw rgba(0,0,0,0.8); }
+        @keyframes vhs-scanlines { from { background-position: 0 0; } to { background-position: 0 100%; } }
+        @keyframes text-flicker { 0%, 100% { opacity: 0.95; } 2% { opacity: 0.8; } 4% { opacity: 0.95; } 8% { opacity: 0.9; } 10% { opacity: 0.95; } }
+    </style>
+</head>
+<body>
+    <div id="ui-container">
+        <div id="hud-container">
+            <div>Phase: <span id="hud-phase">SETUP</span></div>
+            <div>Time: <span id="hud-time">00:20</span></div>
+            <div style="margin-top: 10px;">Stamina</div>
+            <div class="hud-bar"><div id="stamina-fill" style="width: 100%"></div></div>
+            <div>Sanity</div>
+            <div class="hud-bar"><div id="sanity-fill" style="width: 100%"></div></div>
+        </div>
+        <div id="interaction-prompt"></div>
+    </div>
+    <div id="vhs-overlay" class="vignette"></div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/",
+            "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js",
+            "stats.js": "https://unpkg.com/stats.js@0.17.0/build/stats.module.js"
+        }
+    }
+    </script>
+    <script type="module" src="../src/main.js"></script>
+</body>
+</html>

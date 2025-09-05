@@ -31,6 +31,10 @@ class KillerController {
         });
     }
 
+    setDisasters(disasters) {
+        this.disasters = disasters;
+    }
+
     update(deltaTime, gameState) {
         if (gameState.matchPhase === 'setup') {
             if (this.body.position.y < 500) {
@@ -42,8 +46,8 @@ class KillerController {
                 const spawnPoint = this.brain.getRandomNavPoint();
                 this.body.position.copy(spawnPoint);
             }
-            const playerState = gameState.players['local_player'] || { isHiding: false };
-            this.brain.update(deltaTime, playerState);
+            // The brain gets the full game state to make decisions
+            this.brain.update(deltaTime, gameState);
         } else {
             this.body.velocity.set(0,0,0);
         }
@@ -51,7 +55,10 @@ class KillerController {
         if(this.body.velocity.length() > 1){
             this.footstepTimer -= deltaTime;
             if (this.footstepTimer <= 0) {
-                this.audioBus.playSoundAt(this.body.position, 'footstep', 2);
+                const waterLevel = this.disasters ? this.disasters.getWaterLevel() : -100;
+                const isInWater = this.body.position.y < waterLevel + 0.8;
+                const sound = isInWater ? 'splash_killer' : 'footstep_killer';
+                this.audioBus.playSoundAt(this.body.position, sound, 1.5);
                 this.footstepTimer = 0.6 / (this.body.velocity.length() / this.config.walk);
             }
         }

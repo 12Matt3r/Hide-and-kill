@@ -88,6 +88,7 @@ class HouseOfLastLight {
 
         // Simulate network loop
         this.server.update(deltaTime, {
+            id: this.gameState.localPlayer.id,
             playerPosition: this.engine.playerController.body.position,
             isPlayerHiding: this.engine.playerController.state.isHiding
         });

@@ -52,9 +52,13 @@ class Engine {
         this.houseGen = new HouseGen(this.scene, this.physics.world, seed, this.audioBus);
         const houseData = this.houseGen.generate();
         
-        this.killerController = new KillerController(this.scene, this.physics.world, houseData, this.config.killer, this.playerController.body, this.audioBus);
+        this.killerController = new KillerController(this.scene, this.physics.world, houseData, this.config.killer, null, this.audioBus);
         this.disasters = new Disasters(this.scene, this.physics.world, this.config.disasters, this.audioBus);
         
+        // Pass disaster controller to entities that need to know about it
+        this.playerController.setDisasters(this.disasters);
+        this.killerController.setDisasters(this.disasters);
+
         this.playerController.setPosition(...this.houseGen.getRandomSpawnPoint().toArray());
         this.audioBus.playMusic(this.config.audio.masterVolume * 0.2);
     }

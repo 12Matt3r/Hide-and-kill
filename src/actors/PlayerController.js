@@ -59,6 +59,10 @@ class PlayerController {
         this.input.resetJustPressed();
     }
     
+    setDisasters(disasters) {
+        this.disasters = disasters;
+    }
+
     updateMovement(deltaTime) {
         const isSprinting = this.input.isKeyDown('ShiftLeft') && this.state.stamina > 0 && !this.state.isCrouched;
         let currentSpeed = this.state.isCrouched ? this.config.crouch : this.config.walk;
@@ -79,8 +83,11 @@ class PlayerController {
             
             this.footstepTimer -= deltaTime;
             if (this.footstepTimer <= 0) {
+                const waterLevel = this.disasters ? this.disasters.getWaterLevel() : -100;
+                const isInWater = this.body.position.y < waterLevel + 0.5;
+                const sound = isInWater ? 'splash' : 'footstep';
                 const volume = this.state.isCrouched ? 0.2 : (isSprinting ? 1 : 0.5);
-                this.audioBus.playSoundAt(this.body.position, 'footstep', volume);
+                this.audioBus.playSoundAt(this.body.position, sound, volume * (isInWater ? 1.2 : 1));
                 this.footstepTimer = isSprinting ? 0.3 : (this.state.isCrouched ? 0.8 : 0.5);
             }
         }

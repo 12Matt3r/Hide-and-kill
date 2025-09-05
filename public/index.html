@@ -150,6 +150,30 @@
     </div>
     <div id="vhs-overlay" class="vignette"></div>
 
+    <!-- Menu Panels -->
+    <div id="main-menu" class="ui-panel">
+        <h1>House of Last Light</h1>
+        <p style="font-size: 1.2em;">The last one alive wins. Don't get caught.</p>
+        <div style="margin: 20px 0;">
+            <label for="seed-input" style="display: block; margin-bottom: 5px; text-align: left;">Custom Seed (Optional)</label>
+            <input type="text" id="seed-input" placeholder="Enter text for a unique house..." style="width: calc(100% - 20px); background: #111; border: 1px solid #555; color: var(--ui-text); padding: 8px; font-family: 'VT323', monospace; font-size: 1.1em;">
+        </div>
+        <button id="start-game-btn">Enter the House</button>
+    </div>
+
+    <div id="pause-menu" class="ui-panel" style="display: none;">
+        <h2>Paused</h2>
+        <button id="resume-game-btn">Resume</button>
+        <button onclick="window.location.reload()">Exit to Main Menu</button>
+    </div>
+
+    <div id="end-screen" class="ui-panel" style="display: none;">
+        <h1 id="end-screen-title"></h1>
+        <button id="play-again-btn">Play Again</button>
+    </div>
+
+    <div id="game-phase-banner"></div>
+
     <script type="importmap">
     {
         "imports": {

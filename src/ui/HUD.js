@@ -1,16 +1,18 @@
 class HUD {
     constructor() {
-        this.container = document.getElementById('ui-container');
         this.hudElement = document.getElementById('hud-container');
-        this.phaseBanner = document.createElement('div');
-        this.phaseBanner.id = 'game-phase-banner';
-        this.container.appendChild(this.phaseBanner);
+        this.phaseBanner = document.getElementById('game-phase-banner');
+        this.endScreen = document.getElementById('end-screen');
+        this.endScreenTitle = document.getElementById('end-screen-title');
+        this.playAgainBtn = document.getElementById('play-again-btn');
 
         this.staminaFill = document.getElementById('stamina-fill');
         this.sanityFill = document.getElementById('sanity-fill');
         this.phaseText = document.getElementById('hud-phase');
         this.timeText = document.getElementById('hud-time');
+
         this.isEndScreenVisible = false;
+        this.playAgainBtn.onclick = () => window.location.reload();
     }
 
     show() { this.hudElement.style.display = 'block'; }
@@ -18,6 +20,8 @@ class HUD {
     toggleHelp() { /* TODO */ }
 
     update(gameState) {
+        if (this.isEndScreenVisible) return;
+
         if (gameState.phaseChanged) {
             this.showPhaseBanner(gameState.matchPhase);
             gameState.phaseChanged = false;
@@ -40,6 +44,8 @@ class HUD {
             case 'hunt': text = "The Hunt Begins"; break;
             case 'showdown': text = "FINAL SHOWDOWN"; break;
         }
+        if (!text) return;
+
         this.phaseBanner.textContent = text;
         this.phaseBanner.style.display = 'block';
         this.phaseBanner.style.animation = 'none'; // Reset animation
@@ -47,21 +53,14 @@ class HUD {
     }
 
     showEndScreen(winner) {
+        if (this.isEndScreenVisible) return;
         this.isEndScreenVisible = true;
         this.hide();
-        const endPanel = document.createElement('div');
-        endPanel.className = 'ui-panel';
-        endPanel.style.position = 'absolute';
-        endPanel.style.top = '50%';
-        endPanel.style.left = '50%';
-        endPanel.style.transform = 'translate(-50%, -50%)';
-        endPanel.innerHTML = `
-            <h1 style="color: ${winner === 'survivors' ? 'var(--survivor-blue)' : 'var(--killer-red)'};">
-                ${winner === 'survivors' ? 'YOU SURVIVED' : 'YOU DIED'}
-            </h1>
-            <button onclick="window.location.reload()">Play Again</button>
-        `;
-        this.container.appendChild(endPanel);
+
+        const isSurvivorWin = winner === 'survivors';
+        this.endScreenTitle.textContent = isSurvivorWin ? 'YOU SURVIVED' : 'YOU DIED';
+        this.endScreenTitle.style.color = isSurvivorWin ? 'var(--survivor-blue)' : 'var(--killer-red)';
+        this.endScreen.style.display = 'block';
     }
 }
 

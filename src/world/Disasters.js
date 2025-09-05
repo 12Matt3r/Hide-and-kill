@@ -9,13 +9,35 @@ class Disasters {
         this.audioBus = audioBus;
         this.timer = this.config.minDelaySec + Math.random() * (this.config.maxDelaySec - this.config.minDelaySec);
         this.isEarthquake = false;
+        this.isFlood = false;
+        this.waterLevel = -10;
+
+        // Setup water plane for flood
+        const waterGeo = new THREE.PlaneGeometry(100, 100);
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x0066ff, transparent: true, opacity: 0.6, roughness: 0.1 });
+        this.waterMesh = new THREE.Mesh(waterGeo, waterMat);
+        this.waterMesh.rotation.x = -Math.PI / 2;
+        this.waterMesh.visible = false;
+        this.scene.add(this.waterMesh);
+
+        this.waterBody = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC, shape: new CANNON.Plane() });
+        this.waterBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        this.waterBody.position.y = this.waterLevel;
     }
+
+    getWaterLevel() { return this.isFlood ? this.waterLevel : -100; }
     
     update(deltaTime) {
         this.timer -= deltaTime;
-        if (this.timer <= 0) {
+        if (this.timer <= 0 && !this.isFlood) { // Don't trigger new disasters during a flood
             this.triggerRandomDisaster();
             this.timer = this.config.minDelaySec + Math.random() * (this.config.maxDelaySec - this.config.minDelaySec);
+        }
+
+        if (this.isFlood && this.waterLevel < 3) {
+            this.waterLevel += deltaTime * 0.1; // Water rises slowly
+            this.waterMesh.position.y = this.waterLevel;
+            this.waterBody.position.y = this.waterLevel;
         }
     }
     
@@ -27,6 +49,7 @@ class Disasters {
             if (rand <= cumulativeProb) {
                 if (disaster === 'lightning') this.triggerLightning();
                 if (disaster === 'earthquake') this.triggerEarthquake();
+                if (disaster === 'flood') this.triggerFlood();
                 return;
             }
         }
@@ -51,6 +74,15 @@ class Disasters {
         flash.position.set(Math.random()-0.5, 1, Math.random()-0.5).normalize();
         this.scene.add(flash);
         setTimeout(() => this.scene.remove(flash), 150);
+    }
+
+    triggerFlood() {
+        if (this.isFlood) return;
+        console.log("%cFLOOD TRIGGERED", "color:blue; font-size: 1.5em;");
+        this.isFlood = true;
+        this.waterMesh.visible = true;
+        this.physicsWorld.addBody(this.waterBody);
+        this.audioBus.playSoundAt(this.waterMesh.position, 'water_rising', 0.7);
     }
 }
 

@@ -1,43 +1,42 @@
 class Menu {
     constructor(game) {
         this.game = game;
-        this.container = document.getElementById('ui-container');
+        this.mainMenu = document.getElementById('main-menu');
+        this.pauseMenu = document.getElementById('pause-menu');
+        this.seedInput = document.getElementById('seed-input');
+        this.startButton = document.getElementById('start-game-btn');
+        this.resumeButton = document.getElementById('resume-game-btn');
+
+        this.startButton.onclick = () => {
+            const seed = this.seedInput.value;
+            this.game.startGame(seed ? this.hashCode(seed) : Date.now());
+        };
+
+        this.resumeButton.onclick = () => {
+            // Simulate an 'Escape' keypress to toggle the pause state in main.js
+            document.dispatchEvent(new KeyboardEvent('keydown', {'code': 'Escape'}));
+        };
     }
 
     showMainMenu() {
-        const menuPanel = document.createElement('div');
-        menuPanel.id = 'main-menu'; menuPanel.className = 'ui-panel';
-        menuPanel.innerHTML = `
-            <h1>House of Last Light</h1>
-            <p>Click anywhere to enable audio.</p>
-            <div style="margin: 20px 0;">
-                <label for="seed-input" style="display: block; margin-bottom: 5px; text-align: left;">Custom Seed (Optional)</label>
-                <input type="text" id="seed-input" placeholder="Enter text for a unique house..." style="width: calc(100% - 20px); background: #111; border: 1px solid #555; color: var(--ui-text); padding: 8px; font-family: 'VT323', monospace; font-size: 1.1em;">
-            </div>
-            <button id="host-game">Enter the House</button>
-        `;
-        this.container.appendChild(menuPanel);
-        document.getElementById('host-game').onclick = () => {
-            const seedInput = document.getElementById('seed-input').value;
-            this.game.startGame(seedInput ? this.hashCode(seedInput) : Date.now());
-        };
+        this.mainMenu.style.display = 'block';
+        this.pauseMenu.style.display = 'none';
     }
     
-    hashCode(str) { let h=0;for(let i=0;i<str.length;h=((h<<5)-h)+str.charCodeAt(i++),h|=0);return h; }
+    hashCode(str) {
+        let h = 0;
+        for (let i = 0; i < str.length; h = ((h << 5) - h) + str.charCodeAt(i++), h |= 0);
+        return h;
+    }
     
     togglePauseMenu(isPaused) {
-        const existingMenu = document.getElementById('pause-menu');
-        if (existingMenu) existingMenu.remove();
-        if (isPaused) {
-            const pauseMenu = document.createElement('div');
-            pauseMenu.id = 'pause-menu'; pauseMenu.className = 'ui-panel';
-            pauseMenu.innerHTML = `<h2>Paused</h2><button id="resume-game">Resume</button><button onclick="window.location.reload()">Exit</button>`;
-            this.container.appendChild(pauseMenu);
-            document.getElementById('resume-game').onclick = () => document.dispatchEvent(new KeyboardEvent('keydown', {'code': 'Escape'}));
-        }
+        this.pauseMenu.style.display = isPaused ? 'block' : 'none';
     }
 
-    hideAll() { this.container.innerHTML = ''; }
+    hideAll() {
+        this.mainMenu.style.display = 'none';
+        this.pauseMenu.style.display = 'none';
+    }
 }
 
 export default Menu;

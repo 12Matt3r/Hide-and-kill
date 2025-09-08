@@ -9,12 +9,19 @@ class GameState {
         this.survivors = {}; // Keyed by player ID
         this.livingSurvivorCount = 0;
 
+        this.doors = {};
+        this.throwables = {};
+        this.furniture = [];
+        this.walls = [];
+        this.floors = [];
+
         this.killer = {
             position: new CANNON.Vec3(1000, 1000, 1000), // Start killer far away
             isStunned: false
         };
         this.interactables = {}; // e.g., door states
         this.activeDisaster = null;
+        this.waterLevel = -10;
         this.phaseChanged = false; // UI flag
         
         // Local state, not synced over network
@@ -38,6 +45,8 @@ class GameState {
             position: new CANNON.Vec3(0, 5, 0),
             status: 'alive', // alive, dead
             isHiding: false,
+            isSlowed: false,
+            sanity: 100,
         };
         this.livingSurvivorCount++;
     }

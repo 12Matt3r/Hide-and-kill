@@ -7,7 +7,7 @@ class KillerBrain {
         this.hidingSpots = houseData.hidingSpots;
         this.config = config;
 
-        this.state = 'PATROL'; // PATROL, SEARCH, CHASE, INVESTIGATE
+        this.state = 'PATROL'; // PATROL, SEARCH, CHASE, INVESTIGATE, BAIT
         this.currentTarget = null; // The survivor object being targeted
         this.targetPoint = this.getRandomNavPoint(); // A location to move towards
         this.stateTimer = 0;
@@ -67,6 +67,7 @@ class KillerBrain {
             case 'SEARCH': this.search(); break;
             case 'CHASE': this.chase(); break;
             case 'INVESTIGATE': this.investigate(); break;
+            case 'BAIT': this.bait(); break;
         }
     }
     
@@ -90,21 +91,46 @@ class KillerBrain {
     }
     
     search() {
-        if (this.body.position.distanceTo(this.targetPoint) < 2) {
-            // Arrived at search location, now check nearby hiding spots
+        if (this.stateTimer < 1.5) { // Pause for 1.5s after checking a spot
+            this.body.velocity.set(0,0,0);
+            return;
+        }
+
+        if (this.body.position.distanceTo(this.targetPoint) < 2 && this.currentRoomHidingSpots.length === 0) {
+            // Arrived at search location, now populate hiding spots
             this.currentRoomHidingSpots = this.hidingSpots
                 .filter(spot => spot.position.distanceTo(this.body.position) < 8)
                 .map(spot => spot.position.clone());
         }
 
         if (this.currentRoomHidingSpots.length > 0) {
+            // Move to the next hiding spot
             this.moveTowards(this.currentRoomHidingSpots[0], this.config.walk * 0.8);
             if (this.body.position.distanceTo(this.currentRoomHidingSpots[0]) < 1.5) {
                 this.currentRoomHidingSpots.shift(); // "Checked" it
+                this.stateTimer = 0; // Pause after checking each spot
             }
         } else {
-            // Finished searching, go back to patrol
-            this.state = 'PATROL';
+            // Finished searching room, decide whether to patrol or bait
+            if (Math.random() < 0.25) { // 25% chance to bait
+                this.state = 'BAIT';
+                this.targetPoint = this.getRandomNavPoint(); // Pick a point outside the room
+            } else {
+                this.state = 'PATROL';
+            }
+            this.stateTimer = 0;
+        }
+    }
+
+    bait() {
+        // Move to a point just outside the room and wait
+        this.moveTowards(this.targetPoint, this.config.walk);
+        if (this.body.position.distanceTo(this.targetPoint) < 2) {
+            // Arrived at bait point, now wait
+            this.body.velocity.set(0,0,0); // Stand still
+            if (this.stateTimer > 8) { // Wait for 8 seconds
+                this.state = 'PATROL';
+            }
         }
     }
 

@@ -4,16 +4,38 @@ A low-poly, multiplayer horror hide-and-seek game built with Three.js.
 
 ## Running the Game
 
-1.  **Start a local server.** This project uses ES Modules, which require a server to run due to CORS policies. A simple way is to use Python's built-in server. From the project's root directory (the one containing `public`), run:
-    ```bash
-    python -m http.server 8000
-    ```
-    Or, if you have Node.js installed, you can use `serve`:
-    ```bash
-    npx serve .
-    ```
+This project now uses a true client-server model. You will need to run two processes simultaneously in separate terminals.
 
-2.  **Open your browser** and navigate to `http://localhost:8000/public/` (or the port your server is running on).
+**1. Start the Server:**
+
+First, navigate to the server directory and install its dependencies:
+```bash
+cd server
+npm install
+```
+Then, start the server:
+```bash
+npm start
+```
+The server will be running on `ws://localhost:8080`.
+
+**2. Start the Client:**
+
+This project uses ES Modules, which require a server to run due to CORS policies. From the project's **root directory**, run a simple static file server.
+A simple way is to use Python's built-in server:
+```bash
+# Make sure you are in the project's root directory
+python -m http.server 8000
+```
+Or, if you have Node.js installed, you can use `serve`:
+```bash
+# Make sure you are in the project's root directory
+npx serve .
+```
+
+**3. Play the Game:**
+
+Open your browser and navigate to `http://localhost:8000/public/`. The game will attempt to connect to the WebSocket server automatically when you start. You can open multiple browser tabs to see multiple players join the same game.
 
 ## Controls
 

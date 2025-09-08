@@ -1,0 +1,16 @@
+{
+  "name": "house-of-last-light-server",
+  "version": "1.0.0",
+  "description": "Node.js WebSocket server for House of Last Light",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cannon-es": "^0.20.0",
+    "three": "^0.180.0",
+    "uuid": "^9.0.0",
+    "ws": "^8.13.0"
+  }
+}

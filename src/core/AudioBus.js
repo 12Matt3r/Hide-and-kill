@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 
 class AudioBus {
-    constructor(camera) {
+    constructor(camera, physicsWorld) {
         this.camera = camera;
+        this.physicsWorld = physicsWorld;
         this.initialized = false;
         this.soundSources = new Map();
     }
@@ -46,9 +47,21 @@ class AudioBus {
 
     playSoundAt(position, soundType, volume = 1, props = {}) {
         if (!this.initialized) return;
+
+        const listenerPos = new THREE.Vector3();
+        this.listener.getWorldPosition(listenerPos);
+        const soundPos = position;
+        const direction = soundPos.clone().sub(listenerPos).normalize();
+        const distance = listenerPos.distanceTo(soundPos);
+
+        const ray = new CANNON.Ray(new CANNON.Vec3().copy(listenerPos), new CANNON.Vec3().copy(soundPos));
+        const result = new CANNON.RaycastResult();
+        this.physicsWorld.raycastClosest(ray.from, ray.to, {}, result);
         
+        const isObstructed = result.hasHit && result.distance < distance - 0.1;
+
         const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+        gain.gain.setValueAtTime(isObstructed ? volume * 0.5 : volume, this.ctx.currentTime);
 
         let source;
         let isGlobal = false;
@@ -102,7 +115,15 @@ class AudioBus {
             panner.positionX.setValueAtTime(position.x, this.ctx.currentTime);
             panner.positionY.setValueAtTime(position.y, this.ctx.currentTime);
             panner.positionZ.setValueAtTime(position.z, this.ctx.currentTime);
-            source.connect(gain).connect(panner).connect(this.masterGain);
+
+            if (isObstructed) {
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 600;
+                source.connect(gain).connect(filter).connect(panner).connect(this.masterGain);
+            } else {
+                source.connect(gain).connect(panner).connect(this.masterGain);
+            }
         }
     }
 

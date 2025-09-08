@@ -1,18 +1,17 @@
 import Engine from './core/Engine.js';
 import Menu from './ui/Menu.js';
 import HUD from './ui/HUD.js';
-import GameState from './net/state.js';
-import MockServer from './net/Server.js';
-import MockClient from './net/Client.js';
+import Client from './net/Client.js';
 
 class HouseOfLastLight {
     constructor() {
-        this.gameState = new GameState();
-        this.engine = new Engine(this.gameState);
+        this.engine = new Engine();
         this.menu = new Menu(this);
         this.hud = new HUD();
+        this.client = new Client();
         this.isPaused = true;
         this.lastTime = 0;
+        this.gameState = null; // Will be received from server
         this.init();
     }
 
@@ -20,20 +19,15 @@ class HouseOfLastLight {
         console.log("Initializing House of Last Light...");
         await this.loadConfig();
 
-        this.server = new MockServer(this.gameState, this.config);
-        this.client = new MockClient(this.server);
-        
         this.engine.init(this.config, this.client);
         this.menu.showMainMenu();
         this.setupEventListeners();
         
-        console.log("%cQA CHECKLIST - FINAL BUILD v1.0", "color: lime; font-size: 1.2em;");
-        console.log(" [X] Perf ≥ 55 FPS on integrated GPU, 1080p, Medium preset.");
-        console.log(" [X] 3 distinct seeds produce different room graphs.");
-        console.log(" [X] Hiding spots are discoverable; at least 1 per room.");
-        console.log(" [X] Disasters trigger once per round minimum.");
-        console.log(" [X] Final Showdown transitions correctly and ends match.");
-        console.log(" [X] No softlocks: every floor reachable after events.");
+        this.client.onStateUpdate = (newState) => {
+            this.gameState = newState;
+        };
+
+        console.log("%cQA CHECKLIST - Awaiting Server Connection...", "color: yellow; font-size: 1.2em;");
     }
     
     async loadConfig() {
@@ -62,40 +56,45 @@ class HouseOfLastLight {
         });
     }
 
-    startGame(seed) {
+    async startGame(seed) {
+        try {
+            await this.client.connect();
+        } catch (error) {
+            console.error("Failed to connect to server.", error);
+            alert("Could not connect to the game server. Please ensure it is running.");
+            return;
+        }
+
         this.isPaused = false;
         this.menu.hideAll();
         this.hud.show();
-        this.engine.start(seed);
+        this.engine.start();
         this.engine.requestPointerLock();
         this.lastTime = performance.now();
-        this.server.startMatch();
         this.gameLoop();
     }
 
     gameLoop(currentTime = performance.now()) {
+        requestAnimationFrame(this.gameLoop.bind(this));
+        if (!this.gameState || this.isPaused) return;
+
         if (this.gameState.matchPhase === 'ended') {
              if (!this.hud.isEndScreenVisible) this.hud.showEndScreen(this.gameState.winner);
              return;
         }
         
-        requestAnimationFrame(this.gameLoop.bind(this));
-        
         const deltaTime = (currentTime - this.lastTime) / 1000;
         this.lastTime = currentTime;
 
-        if (this.isPaused) return;
-
-        // Simulate network loop
-        this.server.update(deltaTime, {
-            id: this.gameState.localPlayer.id,
-            playerPosition: this.engine.playerController.body.position,
-            isPlayerHiding: this.engine.playerController.state.isHiding
+        // Send client state to server
+        this.client.send('playerUpdate', {
+            position: this.engine.playerController.body.position,
+            isHiding: this.engine.playerController.state.isHiding
         });
-        const latestState = this.server.getLatestState();
         
-        this.engine.update(deltaTime, latestState);
-        this.hud.update(latestState);
+        // Engine and HUD are updated with the latest state from the server
+        this.engine.update(deltaTime, this.gameState);
+        this.hud.update(this.gameState);
     }
 }
 

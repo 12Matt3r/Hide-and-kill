@@ -10,6 +10,7 @@ class HUD {
         this.sanityFill = document.getElementById('sanity-fill');
         this.phaseText = document.getElementById('hud-phase');
         this.timeText = document.getElementById('hud-time');
+        this.finisherPrompt = document.getElementById('finisher-tool-prompt');
 
         this.isEndScreenVisible = false;
         this.playAgainBtn.onclick = () => window.location.reload();
@@ -33,8 +34,11 @@ class HUD {
         this.phaseText.textContent = gameState.matchPhase.toUpperCase();
         this.timeText.textContent = `${minutes}:${seconds}`;
         
-        this.staminaFill.style.width = `${gameState.localPlayer.stamina}%`;
-        this.sanityFill.style.width = `${gameState.localPlayer.sanity}%`;
+        if (gameState.localPlayer) {
+            this.staminaFill.style.width = `${gameState.localPlayer.stamina}%`;
+            this.sanityFill.style.width = `${gameState.localPlayer.sanity}%`;
+            this.finisherPrompt.style.display = gameState.localPlayer.hasFinisherTool ? 'block' : 'none';
+        }
     }
     
     showPhaseBanner(phase) {

@@ -4,12 +4,15 @@ import Random from '../core/Random.js';
 import { Door, FuseBox } from './Interactables.js';
 import { Closet } from './HidingSpots.js';
 
-class HouseGen {
-    constructor(scene, physicsWorld, seed, audioBus) {
+class HouseBuilder {
+    constructor(scene, physicsWorld, audioBus, throwableMeshes, doorObjects) {
         this.scene = scene;
         this.physicsWorld = physicsWorld;
         this.rng = new Random(seed);
         this.audioBus = audioBus;
+        this.throwableMeshes = throwableMeshes;
+        this.doorObjects = doorObjects;
+        this.doorCounter = 0;
         this.wallMaterial = new CANNON.Material("wallMaterial");
         this.navPoints = [];
         this.hidingSpots = [];
@@ -19,26 +22,21 @@ class HouseGen {
         this.scene.add(this.debugLines);
     }
 
-    generate() {
+    build(gameState) {
         this.createGround(100, 100);
         
-        const floors = this.rng.nextInt(2, 3);
-        const roomsPerFloor = 4;
-        let allRooms = [];
+        // Build static geometry from server data
+        gameState.walls.forEach(w => this.createBox(w.s.w, w.s.h, w.s.d, w.p));
+        gameState.floors.forEach(f => this.createBox(f.s.w, f.s.h, f.s.d, f.p));
 
-        for (let y = 0; y < floors; y++) {
-            const floorHeight = y * 5;
-            const floorLights = [];
-            for (let i = 0; i < roomsPerFloor; i++) {
-                const room = { x: (i % 2) * 12, z: Math.floor(i / 2) * 12, w: 10, d: 10, y: floorHeight };
-                allRooms.push(room);
-                this.createRoom(room, floorLights);
-            }
-            new FuseBox(this.scene, new THREE.Vector3(1, floorHeight + 1.5, 1), floorLights, this.audioBus);
-            if (y < floors - 1) this.createStairs({x: 5, y: floorHeight, z: 11});
+        // Build dynamic parts from gameState
+        for (const f of gameState.furniture) {
+            this.createBox(f.size.w, f.size.h, f.size.d, f.position, 0x3d2a1e, 0);
         }
-        
-        return { rooms: allRooms, navPoints: this.navPoints, hidingSpots: this.hidingSpots };
+
+        // TODO: The rest of the house (doors, hiding spots, stairs) needs to be built from server data too.
+        // This is a temporary state.
+        return { navPoints: this.navPoints, hidingSpots: this.hidingSpots };
     }
     
     createRoom(room, floorLights) {
@@ -55,6 +53,12 @@ class HouseGen {
         const hidingSpot = new Closet(this.scene, new THREE.Vector3(room.x + 1, room.y, room.z + 1));
         this.hidingSpots.push(hidingSpot);
 
+        // Add a throwable object randomly
+        if (this.rng.next() > 0.5) {
+            const boxPos = { x: room.x + this.rng.nextFloat(2, 8), y: room.y + 0.25, z: room.z + this.rng.nextFloat(2, 8) };
+            this.createBox(0.5, 0.5, 0.5, boxPos, 0x999999, 2, { isThrowable: true });
+        }
+
         const light = new THREE.PointLight(0xffddaa, 1, 15, 2);
         light.position.set(navPoint.x, navPoint.y + 2.5, navPoint.z);
         light.castShadow = true;
@@ -64,8 +68,12 @@ class HouseGen {
     }
     
     createWall(room, side) {
-        if (this.rng.next() > 0.4) { new Door(this.scene, this.physicsWorld, room, side, this.audioBus); } 
-        else {
+        if (this.rng.next() > 0.4) {
+            const door = new Door(this.scene, this.physicsWorld, room, side, this.audioBus);
+            const doorId = this.doorCounter++;
+            door.mesh.userData.doorId = doorId;
+            this.doorObjects[doorId] = door;
+        } else {
             const wallHeight = 4;
             const pos = {x:0, y: room.y + wallHeight / 2, z:0};
             let w=0, h=wallHeight, d=0.2;
@@ -89,15 +97,24 @@ class HouseGen {
         this.navPoints.push(new THREE.Vector3(pos.x, pos.y, pos.z), new THREE.Vector3(pos.x, pos.y + 5, pos.z + 10));
     }
 
-    createBox(w, h, d, pos, color = 0xaaaaaa, mass = 0) {
+    createBox(w, h, d, pos, color = 0xaaaaaa, mass = 0, options = {}) {
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: 0.8 }));
         mesh.position.set(pos.x, pos.y, pos.z);
         mesh.castShadow = true; mesh.receiveShadow = true;
         this.scene.add(mesh);
+
+        if (options.isThrowable) {
+            mesh.userData.isThrowable = true;
+            mesh.userData.prompt = "Pick Up";
+            this.throwableMeshes[mesh.uuid] = mesh;
+        }
+
         if (mass >= 0) {
             const body = new CANNON.Body({ mass, material: this.wallMaterial, shape: new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/2)) });
             body.position.copy(mesh.position);
             this.physicsWorld.addBody(body);
+            mesh.userData.physicsBody = body; // Link mesh to body
+            body.userData = { mesh }; // Link body to mesh
         }
     }
 

@@ -161,6 +161,17 @@ class Engine {
 
     requestPointerLock() { this.renderer.domElement.requestPointerLock(); }
     togglePointerLock() { document.pointerLockElement === this.renderer.domElement ? document.exitPointerLock() : this.renderer.domElement.requestPointerLock(); }
+
+    showScoutPing(position) {
+        const pingGeo = new THREE.SphereGeometry(0.5, 16, 16);
+        const pingMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 });
+        const pingMesh = new THREE.Mesh(pingGeo, pingMat);
+        pingMesh.position.set(position.x, position.y, position.z);
+        this.scene.add(pingMesh);
+        setTimeout(() => {
+            this.scene.remove(pingMesh);
+        }, 2000); // Visible for 2 seconds
+    }
 }
 
 export default Engine;

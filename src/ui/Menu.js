@@ -2,19 +2,25 @@ class Menu {
     constructor(game) {
         this.game = game;
         this.mainMenu = document.getElementById('main-menu');
+        this.charSelectMenu = document.getElementById('character-select-menu');
         this.pauseMenu = document.getElementById('pause-menu');
         this.settingsMenu = document.getElementById('settings-menu');
 
         this.seedInput = document.getElementById('seed-input');
-        this.startButton = document.getElementById('start-game-btn');
+        this.continueButton = document.getElementById('continue-to-char-select-btn');
         this.resumeButton = document.getElementById('resume-game-btn');
         this.settingsButton = document.getElementById('settings-btn');
         this.settingsBackButton = document.getElementById('settings-back-btn');
 
-        this.startButton.onclick = () => {
-            const seed = this.seedInput.value;
-            this.game.startGame(seed ? this.hashCode(seed) : Date.now());
-        };
+        this.continueButton.onclick = () => this.showCharSelectMenu();
+
+        document.querySelectorAll('.char-select-btn').forEach(btn => {
+            btn.onclick = () => {
+                const seed = this.seedInput.value;
+                const charType = btn.getAttribute('data-char');
+                this.game.startGame(seed ? this.hashCode(seed) : Date.now(), charType);
+            };
+        });
 
         this.resumeButton.onclick = () => {
             document.dispatchEvent(new KeyboardEvent('keydown', {'code': 'Escape'}));
@@ -31,8 +37,14 @@ class Menu {
 
     showMainMenu() {
         this.mainMenu.style.display = 'block';
+        this.charSelectMenu.style.display = 'none';
         this.pauseMenu.style.display = 'none';
         this.settingsMenu.style.display = 'none';
+    }
+
+    showCharSelectMenu() {
+        this.mainMenu.style.display = 'none';
+        this.charSelectMenu.style.display = 'block';
     }
 
     showSettingsMenu() {
@@ -53,6 +65,8 @@ class Menu {
     hideAll() {
         this.mainMenu.style.display = 'none';
         this.pauseMenu.style.display = 'none';
+        this.settingsMenu.style.display = 'none';
+        this.charSelectMenu.style.display = 'none';
     }
 }
 

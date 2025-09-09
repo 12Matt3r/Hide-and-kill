@@ -14,6 +14,7 @@ class ServerHouseGen {
         const furniture = [];
         const walls = [];
         const floors = [];
+        const fuseBoxes = {};
         const rooms = [
             { x: 0, z: 0, w: 10, d: 10, y: 0 },
             { x: 12, z: 0, w: 10, d: 10, y: 0 },
@@ -58,9 +59,17 @@ class ServerHouseGen {
                     size: { w: 2, h: 0.8, d: 1.2 },
                 });
             }
+            // Add a fusebox to each room
+            const f_id = uuidv4();
+            fuseBoxes[f_id] = {
+                id: f_id,
+                position: { x: room.x + 1, y: room.y + 1.5, z: room.z + 1 },
+                progress: 0,
+                isRepaired: false,
+            };
         }
 
-        return { throwables, doors, furniture, walls, floors };
+        return { throwables, doors, furniture, walls, floors, fuseBoxes };
     }
 }
 

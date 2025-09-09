@@ -10,6 +10,7 @@ class HUD {
         this.sanityFill = document.getElementById('sanity-fill');
         this.phaseText = document.getElementById('hud-phase');
         this.timeText = document.getElementById('hud-time');
+        this.objectivesText = document.getElementById('hud-objectives');
         this.finisherPrompt = document.getElementById('finisher-tool-prompt');
 
         this.isEndScreenVisible = false;
@@ -33,6 +34,11 @@ class HUD {
         
         this.phaseText.textContent = gameState.matchPhase.toUpperCase();
         this.timeText.textContent = `${minutes}:${seconds}`;
+
+        if (gameState.fuseBoxes) {
+            const repairedCount = Object.values(gameState.fuseBoxes).filter(b => b.isRepaired).length;
+            this.objectivesText.textContent = `${repairedCount} / 3`;
+        }
         
         if (gameState.localPlayer) {
             this.staminaFill.style.width = `${gameState.localPlayer.stamina}%`;

@@ -14,10 +14,13 @@ class GameState {
         this.furniture = [];
         this.walls = [];
         this.floors = [];
+        this.fuseBoxes = {};
 
         this.killer = {
+            type: 'stalker', // stalker, phantom, brute
             position: new CANNON.Vec3(1000, 1000, 1000), // Start killer far away
-            isStunned: false
+            isStunned: false,
+            isInvisible: false,
         };
         this.interactables = {}; // e.g., door states
         this.activeDisaster = null;
@@ -38,15 +41,18 @@ class GameState {
         this.addSurvivor(this.localPlayer.id);
     }
 
-    addSurvivor(id) {
+    addSurvivor(id, charType = 'default') {
         if (this.survivors[id]) return;
         this.survivors[id] = {
             id: id,
+            type: charType,
             position: new CANNON.Vec3(0, 5, 0),
             status: 'alive', // alive, dead
             isHiding: false,
             isSlowed: false,
             sanity: 100,
+            abilityUsed: false,
+            isRepairing: false,
         };
         this.livingSurvivorCount++;
     }

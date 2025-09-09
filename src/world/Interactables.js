@@ -94,24 +94,12 @@ export class Door extends Interactable {
 }
 
 export class FuseBox extends Interactable {
-    constructor(scene, position, lights, audioBus) {
+    constructor(scene, mesh) {
         super();
-        this.lights = lights;
-        this.audioBus = audioBus;
-        this.areLightsOn = true;
-        this.prompt = "Cut Power";
-        
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.2), new THREE.MeshStandardMaterial({ color: 0x555555 }));
-        mesh.position.copy(position);
-        mesh.userData.interactable = this;
-        scene.add(mesh);
+        this.scene = scene;
         this.mesh = mesh;
+        this.prompt = "Repair Fuse Box";
     }
     
-    onInteract() {
-        this.areLightsOn = !this.areLightsOn;
-        this.lights.forEach(light => light.visible = this.areLightsOn);
-        this.prompt = this.areLightsOn ? "Cut Power" : "Restore Power";
-        this.audioBus.playSoundAt(this.mesh.position, 'switch_flick', 1);
-    }
+    // onInteract is now handled by the PlayerController for timed interactions
 }

@@ -96,6 +96,7 @@ class PlayerController {
         }
         
         this.updateSanityEffects(deltaTime);
+        this.updateAbilities(gameState);
         this.yawObject.position.copy(this.body.position).y += (this.state.isCrouched ? this.crouchHeight : this.height) / 2 - 0.5;
         this.input.resetJustPressed();
     }
@@ -176,16 +177,35 @@ class PlayerController {
 
         if (firstHit && (firstHit.userData.interactable || firstHit.userData.isThrowable)) {
             const target = firstHit.userData.interactable || firstHit;
-            this.interactionPrompt.innerText = `[E] ${target.userData.prompt || 'Interact'}`;
-            if (this.input.isKeyJustPressed('KeyE')) {
-                if (target.userData.isThrowable) {
-                    this.pickupObject(target);
+            const fuseBoxId = firstHit.userData.fuseBoxId;
+
+            if (fuseBoxId) {
+                // Timed interaction for fuse boxes
+                const boxState = gameState.fuseBoxes[fuseBoxId];
+                if (boxState && !boxState.isRepaired) {
+                    this.interactionPrompt.innerText = `[Hold E] Repair (${Math.floor(boxState.progress)}%)`;
+                    if (this.input.isKeyDown('KeyE')) {
+                        this.client.send('startRepairing', { fuseBoxId });
+                    } else {
+                        this.client.send('stopRepairing', {});
+                    }
                 } else {
-                    target.onInteract(this, gameState);
+                     this.interactionPrompt.innerText = 'Repaired';
+                }
+            } else {
+                // Standard interaction for other objects
+                this.interactionPrompt.innerText = `[E] ${target.userData.prompt || 'Interact'}`;
+                if (this.input.isKeyJustPressed('KeyE')) {
+                    if (target.userData.isThrowable) {
+                        this.pickupObject(target);
+                    } else {
+                        target.onInteract(this, gameState);
+                    }
                 }
             }
         } else {
             this.interactionPrompt.innerText = '';
+            this.client.send('stopRepairing', {}); // Ensure we stop repairing if we look away
         }
     }
 
@@ -257,6 +277,17 @@ class PlayerController {
         this.state.isHiding = false; this.body.type = CANNON.Body.DYNAMIC;
         this.body.position.x += 1; // Eject from spot
         this.currentHidingSpot.onExit(); this.currentHidingSpot = null;
+    }
+
+    updateAbilities(gameState) {
+        if (!gameState || !gameState.survivors) return;
+        const myState = gameState.survivors[this.client.id];
+        if (!myState) return;
+
+        if (myState.type === 'scout' && !myState.abilityUsed && this.input.isKeyJustPressed('KeyF')) {
+            console.log("Using Scout ability!");
+            this.client.send('useScoutAbility', {});
+        }
     }
 }
 

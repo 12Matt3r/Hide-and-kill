@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import KillerBrain from './AI/KillerBrain.js';
+import PhantomBrain from './AI/PhantomBrain.js';
 
 class KillerController {
     constructor(scene, physicsWorld, houseData, config, playerBody, audioBus) {
@@ -22,8 +23,9 @@ class KillerController {
         this.body = new CANNON.Body({ mass: 100, shape: new CANNON.Sphere(0.8), allowSleep: false, linearDamping: 0.8 });
         this.body.position.set(1000, 1000, 1000); // Start far away
         physicsWorld.addBody(this.body);
-
-        this.brain = new KillerBrain(this.body, houseData, config, playerBody);
+        this.brain = null; // Brain will be created on first update
+        this.houseData = houseData;
+        this.playerBody = playerBody;
 
         physicsWorld.addEventListener('postStep', () => {
             this.mesh.position.copy(this.body.position);
@@ -36,21 +38,32 @@ class KillerController {
     }
 
     update(deltaTime, gameState) {
+        if (!this.brain && gameState.killer.type) {
+            // First time update, create the correct brain
+            switch (gameState.killer.type) {
+                case 'phantom':
+                    this.brain = new PhantomBrain(this.body, this.houseData, this.config);
+                    break;
+                default:
+                    this.brain = new KillerBrain(this.body, this.houseData, this.config);
+            }
+        }
+
         if (gameState.matchPhase === 'setup') {
-            if (this.body.position.y < 500) {
-                this.body.position.set(1000,1000,1000);
-            }
+            if (this.body.position.y < 500) this.body.position.set(1000,1000,1000);
             this.body.velocity.set(0,0,0);
-        } else if (gameState.matchPhase === 'hunt' || gameState.matchPhase === 'showdown') {
-            if (this.body.position.y > 500) { // First spawn after setup
-                const spawnPoint = this.brain.getRandomNavPoint();
-                this.body.position.copy(spawnPoint);
+        } else if (this.brain && (gameState.matchPhase === 'hunt' || gameState.matchPhase === 'showdown')) {
+            if (this.body.position.y > 500) { // First spawn
+                this.body.position.copy(this.brain.getRandomNavPoint());
             }
-            // The brain gets the full game state to make decisions
             this.brain.update(deltaTime, gameState);
         } else {
             this.body.velocity.set(0,0,0);
         }
+
+        // Handle visuals
+        this.mesh.material.opacity = gameState.killer.isInvisible ? 0.3 : 1;
+        this.mesh.material.transparent = gameState.killer.isInvisible;
 
         if(this.body.velocity.length() > 1){
             this.footstepTimer -= deltaTime;

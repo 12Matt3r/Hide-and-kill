@@ -26,6 +26,9 @@ class HouseOfLastLight {
         this.client.onStateUpdate = (newState) => {
             this.gameState = newState;
         };
+        this.client.onScoutPing = (position) => {
+            this.engine.showScoutPing(position);
+        };
 
         console.log("%cQA CHECKLIST - Awaiting Server Connection...", "color: yellow; font-size: 1.2em;");
     }
@@ -48,17 +51,17 @@ class HouseOfLastLight {
                 this.menu.togglePauseMenu(this.isPaused);
                 this.engine.togglePointerLock();
             }
-            if (this.isPaused || this.gameState.matchPhase === 'ended') return;
+            if (this.isPaused || !this.gameState || this.gameState.matchPhase === 'ended') return;
 
             if (e.code === 'F1') this.hud.toggleHelp();
-            if (e.code === 'F2') this.engine.houseGen?.toggleDebugView();
+            if (e.code === 'F2') this.engine.houseBuilder?.toggleDebugView();
             if (e.code === 'F3') this.engine.toggleStats();
         });
     }
 
-    async startGame(seed) {
+    async startGame(seed, charType) {
         try {
-            await this.client.connect();
+            await this.client.connect('ws://localhost:8080', charType);
         } catch (error) {
             console.error("Failed to connect to server.", error);
             alert("Could not connect to the game server. Please ensure it is running.");

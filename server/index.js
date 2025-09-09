@@ -4,6 +4,8 @@ import CANNON from 'cannon-es';
 import GameState from '../src/net/state.js';
 import ServerHouseGen from './ServerHouseGen.js';
 import KillerBrain from '../src/actors/AI/KillerBrain.js';
+import PhantomBrain from '../src/actors/AI/PhantomBrain.js';
+// import BruteBrain from '../src/actors/AI/BruteBrain.js'; // For future use
 import ServerDisasters from './ServerDisasters.js';
 import gameConfig from '../config/game.config.json' assert { type: 'json' };
 
@@ -55,6 +57,20 @@ const gameLoop = (roomId) => {
 
             // Flood debuff
             survivor.isSlowed = survivor.position.y < waterLevel + 0.5;
+
+            // Repair progress
+            if (survivor.isRepairing) {
+                const box = room.gameState.fuseBoxes[survivor.isRepairing];
+                if (box && !box.isRepaired) {
+                    const repairSpeed = survivor.type === 'technician' ? 1.15 : 1;
+                    box.progress = Math.min(100, box.progress + (10 * deltaTime) * repairSpeed);
+                    if (box.progress >= 100) {
+                        box.isRepaired = true;
+                        survivor.isRepairing = false;
+                        console.log(`Fuse box ${box.id} repaired!`);
+                    }
+                }
+            }
         }
     }
 
@@ -77,6 +93,17 @@ const gameLoop = (roomId) => {
                 }
             }
         }
+    }
+
+    // Update survivor states
+    let repairedBoxes = 0;
+    for (const id in room.gameState.fuseBoxes) {
+        const box = room.gameState.fuseBoxes[id];
+        if (box.isRepaired) repairedBoxes++;
+    }
+    if (repairedBoxes >= 3) {
+        room.gameState.winner = 'survivors';
+        room.gameState.setPhase('ended');
     }
 
     // Update door states
@@ -112,6 +139,11 @@ server.on('connection', ws => {
                 if (!rooms[roomId]) {
                     // Create a new room
                     const gameState = new GameState();
+
+                    const killerTypes = ['stalker', 'phantom', 'brute'];
+                    gameState.killer.type = killerTypes[Math.floor(Math.random() * killerTypes.length)];
+                    console.log(`Selected killer type: ${gameState.killer.type}`);
+
                     const houseGen = new ServerHouseGen(Date.now());
                     const worldData = houseGen.generate();
                     gameState.throwables = worldData.throwables;
@@ -119,12 +151,24 @@ server.on('connection', ws => {
                     gameState.furniture = worldData.furniture;
                     gameState.walls = worldData.walls;
                     gameState.floors = worldData.floors;
+                    gameState.fuseBoxes = worldData.fuseBoxes;
 
                     const physicsWorld = new CANNON.World();
                     physicsWorld.gravity.set(0, -9.82, 0);
 
                     // Server-side AI brain to react to events
-                    const killerBrain = new KillerBrain(null, { navPoints: [], hidingSpots: [] }, gameConfig.killer);
+                    let killerBrain;
+                    const houseData = { navPoints: [], hidingSpots: [] }; // Simplified for server
+                    switch (gameState.killer.type) {
+                        case 'phantom':
+                            killerBrain = new PhantomBrain(null, houseData, gameConfig.killer);
+                            break;
+                        // case 'brute':
+                        //     killerBrain = new BruteBrain(null, houseData, gameConfig.killer);
+                        //     break;
+                        default:
+                            killerBrain = new KillerBrain(null, houseData, gameConfig.killer);
+                    }
 
                     const throwableBodies = {};
                     for (const id in gameState.throwables) {
@@ -153,8 +197,8 @@ server.on('connection', ws => {
 
                 rooms[roomId].clients.add(ws);
                 ws.roomId = roomId;
-                rooms[roomId].gameState.addSurvivor(clientId);
-                console.log(`Client ${clientId} joined room ${roomId}`);
+                rooms[roomId].gameState.addSurvivor(clientId, data.payload.charType);
+                console.log(`Client ${clientId} joined room ${roomId} as a ${data.payload.charType}`);
                 break;
 
             case 'playerUpdate':
@@ -164,6 +208,20 @@ server.on('connection', ws => {
                         survivor.position = data.payload.position;
                         survivor.isHiding = data.payload.isHiding;
                     }
+                }
+                break;
+
+            case 'startRepairing':
+                if (ws.roomId && rooms[ws.roomId]) {
+                    const survivor = rooms[ws.roomId].gameState.survivors[clientId];
+                    if (survivor) survivor.isRepairing = data.payload.fuseBoxId;
+                }
+                break;
+
+            case 'stopRepairing':
+                if (ws.roomId && rooms[ws.roomId]) {
+                    const survivor = rooms[ws.roomId].gameState.survivors[clientId];
+                    if (survivor) survivor.isRepairing = false;
                 }
                 break;
 
@@ -223,6 +281,22 @@ server.on('connection', ws => {
                     const room = rooms[ws.roomId];
                     console.log(`Ghost whisper received at ${data.payload.position}`);
                     room.killerBrain.hearNoise(new CANNON.Vec3(...data.payload.position));
+                }
+                break;
+
+            case 'useScoutAbility':
+                if (ws.roomId && rooms[ws.roomId]) {
+                    const room = rooms[ws.roomId];
+                    const survivor = room.gameState.survivors[clientId];
+                    if (survivor && survivor.type === 'scout' && !survivor.abilityUsed) {
+                        survivor.abilityUsed = true;
+                        const killerPos = room.gameState.killer.position;
+                        const privateMessage = JSON.stringify({
+                            type: 'scoutPing',
+                            payload: { position: {x: killerPos.x, y: killerPos.y, z: killerPos.z} }
+                        });
+                        ws.send(privateMessage);
+                    }
                 }
                 break;
 

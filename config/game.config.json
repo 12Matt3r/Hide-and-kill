@@ -24,9 +24,8 @@
         "minDelaySec": 45,
         "maxDelaySec": 90,
         "probabilities": {
-            "earthquake": 0.35,
-            "lightning": 0.4,
-            "flood": 0.25
+            "earthquake": 0.4,
+            "lightning": 0.6
         }
     },
     "audio": {

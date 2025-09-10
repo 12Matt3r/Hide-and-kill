@@ -5,14 +5,14 @@ export class Interactable {
     constructor() {
         this.prompt = "Interact";
     }
-    onInteract(player, gameState) { console.log("Interacted with a generic object."); }
+    onInteract(player) { console.log("Interacted with a generic object."); }
 }
 
 export class Door extends Interactable {
     constructor(scene, physicsWorld, room, side, audioBus) {
         super();
         this.audioBus = audioBus;
-        this.isOpen = false; // This will be overwritten by server state
+        this.isOpen = false;
         this.isLocked = false;
         this.prompt = "Open Door";
 
@@ -56,50 +56,46 @@ export class Door extends Interactable {
         this.body.quaternion.copy(worldQuaternion);
     }
 
-    onInteract(player, gameState) {
-        const doorId = this.mesh.userData.doorId;
-        const doorState = gameState.doors[doorId];
-
-        if (!doorState) return;
-
-        if (doorState.isJammed) {
-            this.audioBus.playSoundAt(this.pivot.position, 'door_jammed', 1);
+    onInteract() {
+        if (this.isLocked) {
+            // Play locked sound
             return;
         }
-        if (doorState.isLocked) {
-            this.audioBus.playSoundAt(this.pivot.position, 'door_locked', 1);
-            return;
+        this.isOpen = !this.isOpen;
+        this.pivot.rotation.y += this.isOpen ? Math.PI / 2 : -Math.PI / 2;
+
+        this.body.collisionResponse = !this.isOpen;
+        // A bit of a hack: move the body far away when open
+        if (this.isOpen) {
+            this.body.position.set(1000, 1000, 1000);
+        } else {
+            this.updatePhysicsBody();
         }
 
-        // Send interaction to server instead of changing state locally
-        player.client.send('toggleDoor', { doorId: doorId });
-    }
-
-    // This method will be called by the Engine to sync state
-    syncState(doorState) {
-        if (this.isOpen !== doorState.isOpen) {
-            this.isOpen = doorState.isOpen;
-            this.pivot.rotation.y += this.isOpen ? Math.PI / 2 : -Math.PI / 2;
-            this.body.collisionResponse = !this.isOpen;
-            if (this.isOpen) {
-                this.body.position.set(1000, 1000, 1000);
-            } else {
-                this.updatePhysicsBody();
-            }
-            this.audioBus.playSoundAt(this.pivot.position, 'door_creak', 0.5);
-        }
-        this.isLocked = doorState.isLocked;
-        this.prompt = doorState.isJammed ? "Jammed" : (this.isOpen ? "Close Door" : "Open Door");
+        this.prompt = this.isOpen ? "Close Door" : "Open Door";
+        this.audioBus.playSoundAt(this.pivot.position, 'door_creak', 0.5);
     }
 }
 
 export class FuseBox extends Interactable {
-    constructor(scene, mesh) {
+    constructor(scene, position, lights, audioBus) {
         super();
-        this.scene = scene;
+        this.lights = lights;
+        this.audioBus = audioBus;
+        this.areLightsOn = true;
+        this.prompt = "Cut Power";
+
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.2), new THREE.MeshStandardMaterial({ color: 0x555555 }));
+        mesh.position.copy(position);
+        mesh.userData.interactable = this;
+        scene.add(mesh);
         this.mesh = mesh;
-        this.prompt = "Repair Fuse Box";
     }
     
-    // onInteract is now handled by the PlayerController for timed interactions
+    onInteract() {
+        this.areLightsOn = !this.areLightsOn;
+        this.lights.forEach(light => light.visible = this.areLightsOn);
+        this.prompt = this.areLightsOn ? "Cut Power" : "Restore Power";
+        this.audioBus.playSoundAt(this.mesh.position, 'switch_flick', 1);
+    }
 }

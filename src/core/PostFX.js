@@ -11,8 +11,8 @@ class PostFX {
         this.camera = camera;
         this.composer.addPass(new RenderPass(scene, camera));
 
-        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.5, 0.1);
-        this.composer.addPass(this.bloomPass);
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.5, 0.1);
+        this.composer.addPass(bloomPass);
 
         this.filmPass = new FilmPass(0.35, 0.5, 2048, false);
         this.composer.addPass(this.filmPass);
@@ -22,10 +22,6 @@ class PostFX {
         this.composer.addPass(this.glitchPass);
         
         this.shakeIntensity = 0;
-    }
-
-    setBloomEnabled(enabled) {
-        this.bloomPass.enabled = enabled;
     }
 
     update(sanity, isEarthquake) {

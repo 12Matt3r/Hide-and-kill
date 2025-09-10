@@ -8,9 +8,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "cannon-es": "^0.20.0",
     "three": "^0.180.0",
-    "uuid": "^9.0.0",
     "ws": "^8.13.0"
   }
 }

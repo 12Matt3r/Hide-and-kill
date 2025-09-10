@@ -5,56 +5,19 @@ class GameState {
         this.matchPhase = 'waiting';
         this.matchTimer = 0;
         this.winner = null;
-
-        this.survivors = {}; // Keyed by player ID
-        this.livingSurvivorCount = 0;
-
-        this.doors = {};
-        this.throwables = {};
-        this.furniture = [];
-        this.walls = [];
-        this.floors = [];
-        this.fuseBoxes = {};
-
-        this.killer = {
-            type: 'stalker', // stalker, phantom, brute
-            position: new CANNON.Vec3(1000, 1000, 1000), // Start killer far away
-            isStunned: false,
-            isInvisible: false,
-        };
-        this.interactables = {}; // e.g., door states
+        this.players = {};
+        this.killer = { position: new CANNON.Vec3(1000, 1000, 1000) }; // Start killer far away
+        this.interactables = {};
         this.activeDisaster = null;
-        this.waterLevel = -10;
         this.phaseChanged = false; // UI flag
         
         // Local state, not synced over network
         this.localPlayer = {
-            id: 'local_player', // For mock setup
             stamina: 100,
             sanity: 100,
             isHiding: false,
-            isCrouched: false,
-            hasFinisherTool: false
+            isCrouched: false
         };
-
-        // Initialize mock survivor
-        this.addSurvivor(this.localPlayer.id);
-    }
-
-    addSurvivor(id, charType = 'default') {
-        if (this.survivors[id]) return;
-        this.survivors[id] = {
-            id: id,
-            type: charType,
-            position: new CANNON.Vec3(0, 5, 0),
-            status: 'alive', // alive, dead
-            isHiding: false,
-            isSlowed: false,
-            sanity: 100,
-            abilityUsed: false,
-            isRepairing: false,
-        };
-        this.livingSurvivorCount++;
     }
     
     setPhase(phase, duration) {

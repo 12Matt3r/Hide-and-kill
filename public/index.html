@@ -141,71 +141,14 @@
         <div id="hud-container">
             <div>Phase: <span id="hud-phase">SETUP</span></div>
             <div>Time: <span id="hud-time">00:20</span></div>
-            <div>Objectives: <span id="hud-objectives">0 / 3</span></div>
             <div style="margin-top: 10px;">Stamina</div>
             <div class="hud-bar"><div id="stamina-fill" style="width: 100%"></div></div>
             <div>Sanity</div>
             <div class="hud-bar"><div id="sanity-fill" style="width: 100%"></div></div>
         </div>
         <div id="interaction-prompt"></div>
-        <div id="finisher-tool-prompt" style="display: none; position: absolute; bottom: 120px; left: 20px; font-size: 1.5em; color: var(--survivor-blue); text-shadow: 0 0 5px var(--survivor-blue);">
-            [LMB] Use Finisher
-        </div>
     </div>
     <div id="vhs-overlay" class="vignette"></div>
-
-    <!-- Menu Panels -->
-    <div id="main-menu" class="ui-panel">
-        <h1>House of Last Light</h1>
-        <p style="font-size: 1.2em;">The last one alive wins. Don't get caught.</p>
-        <div style="margin: 20px 0;">
-            <label for="seed-input" style="display: block; margin-bottom: 5px; text-align: left;">Custom Seed (Optional)</label>
-            <input type="text" id="seed-input" placeholder="Enter text for a unique house..." style="width: calc(100% - 20px); background: #111; border: 1px solid #555; color: var(--ui-text); padding: 8px; font-family: 'VT323', monospace; font-size: 1.1em;">
-        </div>
-        <button id="continue-to-char-select-btn">Continue</button>
-        <button id="settings-btn" style="background: #111;">Settings</button>
-    </div>
-
-    <div id="character-select-menu" class="ui-panel" style="display: none;">
-        <h2>Choose Your Survivor</h2>
-        <button class="char-select-btn" data-char="default">The Default</button>
-        <button class="char-select-btn" data-char="technician">The Technician</button>
-        <button class="char-select-btn" data-char="scout">The Scout</button>
-    </div>
-
-    <div id="pause-menu" class="ui-panel" style="display: none;">
-        <h2>Paused</h2>
-        <button id="resume-game-btn">Resume</button>
-        <button onclick="window.location.reload()">Exit to Main Menu</button>
-    </div>
-
-    <div id="end-screen" class="ui-panel" style="display: none;">
-        <h1 id="end-screen-title"></h1>
-        <button id="play-again-btn">Play Again</button>
-    </div>
-
-    <div id="settings-menu" class="ui-panel" style="display: none; width: 400px; text-align: left;">
-        <h2>Settings</h2>
-        <div class="setting-row">
-            <label for="bloom-toggle">Bloom Effect</label>
-            <input type="checkbox" id="bloom-toggle" checked>
-        </div>
-        <div class="setting-row">
-            <label for="vhs-toggle">VHS Overlay</label>
-            <input type="checkbox" id="vhs-toggle" checked>
-        </div>
-        <div class="setting-row">
-            <label for="shadow-quality">Shadow Quality</label>
-            <select id="shadow-quality">
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-            </select>
-        </div>
-        <button id="settings-back-btn" style="margin-top: 20px;">Back</button>
-    </div>
-
-    <div id="game-phase-banner"></div>
 
     <script type="importmap">
     {

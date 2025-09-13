@@ -1,107 +1,97 @@
 import * as THREE from 'three';
 import Stats from 'stats.js';
+import HouseGen from '../world/HouseGen.js';
 import Physics from './Physics.js';
 import PlayerController from '../actors/PlayerController.js';
-import PostFX from './PostFX.js';
-import AudioBus from './AudioBus.js';
-import HouseGen from '../world/HouseGen.js';
 import KillerController from '../actors/KillerController.js';
+import PostFX from './PostFX.js';
 import Disasters from '../world/Disasters.js';
+import AudioBus from './AudioBus.js';
 
 class Engine {
-  constructor({ useStats = true, container = document.body } = {}) {
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.physics = new Physics();
-    this.audioBus = new AudioBus(this.camera);
-    this.useStats = useStats;
-    this.container = container;
-    this.stats = null;
-    this.postFX = null;
-    this._onResize = this.onWindowResize.bind(this);
-  }
-
-  init(config, client) { // client is the mock client here
-    this.config = config;
-    this.client = client;
-
-    this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.container.appendChild(this.renderer.domElement);
-
-    this.scene.background = new THREE.Color(0x000000);
-    this.scene.add(new THREE.AmbientLight(0x404060));
-
-    // This is from the original single-player mock Engine
-    this.playerController = new PlayerController(
-      this.camera,
-      this.physics.world,
-      this.scene,
-      this.client.getLatestState().localPlayer, // Pass the localPlayer state
-      this.config?.survivor,
-      this.audioBus
-    );
-    this.scene.add(this.playerController.getObject());
-
-    this.postFX = new PostFX(this.renderer, this.scene, this.camera);
-    if (this.useStats) {
-      this.stats = new Stats();
-      this.container.appendChild(this.stats.dom);
+    constructor(initialGameState) {
+        this.gameState = initialGameState;
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        this.physics = new Physics();
+        this.audioBus = new AudioBus(this.camera);
     }
-    window.addEventListener('resize', this._onResize, false);
-  }
 
-  start(seed) {
-    // This is from the original single-player mock Engine
-    this.houseGen = new HouseGen(this.scene, this.physics.world, seed, this.audioBus);
-    const houseData = this.houseGen.generate();
+    init(config) { // Removed 'client' dependency
+        this.config = config;
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        document.body.appendChild(this.renderer.domElement);
 
-    this.killerController = new KillerController(this.scene, this.physics.world, houseData, this.config.killer, this.playerController.body, this.audioBus);
-    this.disasters = new Disasters(this.scene, this.physics.world, this.config.disasters, this.audioBus);
+        this.scene.background = new THREE.Color(0x000000);
+        this.scene.fog = new THREE.FogExp2(0x000000, 0.025);
+        this.scene.add(new THREE.AmbientLight(0x202030, 0.5));
 
-    this.playerController.setPosition(...this.houseGen.getRandomSpawnPoint().toArray());
-    this.audioBus.playMusic(this.config.audio.masterVolume * 0.2);
-  }
+        // Temporarily use the initial gameState's localPlayer for setup
+        this.playerController = new PlayerController(this.camera, this.physics.world, this.scene, this.gameState.localPlayer, this.config.survivor, this.audioBus);
+        this.scene.add(this.playerController.getObject());
 
-  update(deltaTime, gameState) {
-    // This is from the original single-player mock Engine
-    this.physics.update(deltaTime);
-    this.playerController.update(deltaTime, this.killerController.body.position);
-    gameState.killer.position.copy(this.killerController.body.position);
-    this.killerController?.update(deltaTime, gameState);
-    this.disasters?.update(deltaTime);
-    this.audioBus.update(this.playerController.getObject().position, this.killerController.body.position);
-    this.postFX.update(gameState.localPlayer.sanity, this.disasters.isEarthquake);
+        this.postFX = new PostFX(this.renderer, this.scene, this.camera);
+        this.setupStats();
 
-    if (this.stats) this.stats.update();
-    if (this.postFX?.composer) {
-      this.postFX.composer.render();
-    } else {
-      this.renderer.render(this.scene, this.camera);
+        window.addEventListener('resize', this.onWindowResize.bind(this), false);
     }
-  }
 
-  onWindowResize() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h);
-    if (this.postFX?.composer) this.postFX.composer.setSize(w, h);
-  }
-
-  requestPointerLock() {
-    this.renderer.domElement.requestPointerLock();
-  }
-
-  togglePointerLock() {
-    if (document.pointerLockElement === this.renderer.domElement) {
-        document.exitPointerLock();
-    } else {
-        this.renderer.domElement.requestPointerLock();
+    setupStats() {
+        this.stats = new Stats();
+        this.stats.dom.style.display = 'none';
+        document.body.appendChild(this.stats.dom);
     }
-  }
+
+    toggleStats() { this.stats.dom.style.display = this.stats.dom.style.display === 'none' ? 'block' : 'none'; }
+
+    start(seed) {
+        // Correctly call new HouseGen with config object
+        this.houseGen = new HouseGen(this.scene, this.physics.world, { seed, audioBus: this.audioBus });
+        const houseData = this.houseGen.generate();
+
+        this.killerController = new KillerController(this.scene, this.physics.world, houseData, this.config.killer, this.playerController.body, this.audioBus);
+        this.disasters = new Disasters(this.scene, this.physics.world, this.config.disasters, this.audioBus);
+
+        this.playerController.setPosition(...this.houseGen.getRandomSpawnPoint().toArray());
+        this.audioBus.playMusic(this.config.audio.masterVolume * 0.2);
+    }
+
+    update(deltaTime, gameState) {
+        this.gameState = gameState;
+
+        this.physics.update(deltaTime);
+        this.playerController.update(deltaTime, this.killerController.body.position);
+
+        // DO NOT mutate server state. This line is removed.
+        // gameState.killer.position.copy(this.killerController.body.position);
+
+        this.killerController?.update(deltaTime, this.gameState);
+        this.disasters?.update(deltaTime);
+        this.audioBus.update(this.playerController.getObject().position, this.killerController.body.position);
+
+        // Guard post-FX updates
+        if (this.postFX && this.gameState?.localPlayer && this.disasters) {
+            this.postFX.update(this.gameState.localPlayer.sanity, this.disasters.isEarthquake);
+        }
+
+        this.stats.update();
+        this.postFX.composer.render();
+    }
+
+    onWindowResize() {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.postFX.composer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    requestPointerLock() { this.renderer.domElement.requestPointerLock(); }
+    togglePointerLock() { document.pointerLockElement === this.renderer.domElement ? document.exitPointerLock() : this.renderer.domElement.requestPointerLock(); }
 }
 
 export default Engine;

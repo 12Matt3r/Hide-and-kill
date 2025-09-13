@@ -18,10 +18,7 @@ class HouseOfLastLight {
     async init() {
         const response = await fetch('../config/game.config.json');
         this.config = await response.json();
-
-        // Pass the mock client for now, as the engine expects it.
-        // This will be removed in the next step.
-        this.engine.init(this.config, {});
+        this.engine.init(this.config, this.client);
         this.menu.showMainMenu();
         
         this.client.onStateUpdate = (newState) => {
@@ -32,50 +29,46 @@ class HouseOfLastLight {
             if (e.code === 'Escape') {
                 this.isPaused = !this.isPaused;
                 this.menu.togglePauseMenu(this.isPaused);
-                if (this.engine.renderer.domElement) {
-                    document.pointerLockElement ? document.exitPointerLock() : this.engine.renderer.domElement.requestPointerLock();
-                }
+                document.pointerLockElement ? document.exitPointerLock() : this.engine.requestPointerLock();
             }
         });
     }
 
-    async startGame(seed) { // Seed is now used by client-side HouseGen
+    async startGame() {
         try {
             await this.client.connect();
-            this.client.send('joinRoom', {});
+            const { worldSeed } = await this.client.request('joinRoom', {});
+
+            this.isPaused = false;
+            this.menu.hideAll();
+            this.hud.show();
+            this.engine.start(worldSeed);
+            this.engine.requestPointerLock();
+            this.lastTime = performance.now();
+            this.gameLoop();
+
         } catch (error) {
-            alert("Could not connect to game server. Please ensure the server is running.");
-            return;
+            console.error("Failed to start game:", error);
+            alert("Could not connect to game server. Please ensure it is running.");
         }
-
-        this.isPaused = false;
-        this.menu.hideAll();
-        this.hud.show();
-
-        // We still use the client-side HouseGen for visuals
-        this.engine.start(seed);
-
-        if (this.engine.renderer.domElement) {
-            this.engine.renderer.domElement.requestPointerLock();
-        }
-
-        this.lastTime = performance.now();
-        this.gameLoop();
     }
 
     gameLoop(currentTime = performance.now()) {
         requestAnimationFrame(this.gameLoop.bind(this));
-        if (this.isPaused) return;
+        if (this.isPaused || !this.gameState) return;
         
         const deltaTime = (currentTime - this.lastTime) / 1000;
         this.lastTime = currentTime;
 
-        // The engine now only needs the gameState for rendering other players
-        this.engine.update(deltaTime, this.gameState);
-
-        if (this.gameState) {
-            this.hud.update(this.gameState);
+        if (this.engine.playerController) {
+            this.client.send('playerUpdate', {
+                position: this.engine.playerController.body.position,
+                rotation: this.engine.playerController.yawObject.rotation.y
+            });
         }
+
+        this.engine.update(deltaTime, this.gameState);
+        this.hud.update(this.gameState);
     }
 }
 
